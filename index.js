@@ -32,7 +32,7 @@ const storage = multer.diskStorage({
 
 mongoose.connect(process.env.MONGOOSE_URL)
 
-app.get("/rv-list",apiKeyAuth,async(req,res)=>{
+app.get("/rv-list",async(req,res)=>{
    const clients = await rendezvous.find();
    res.json(clients)
 })
