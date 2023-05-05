@@ -57,9 +57,10 @@ app.post("/rendez-vous", apiKeyAuth ,(req,res)=>{
 app.put('/rendez-vous/:id', apiKeyAuth ,upload.single('PdfFile') , async (req, res) => {
    const {Date,Temps,Email} = req.body;
    const PdfFile = req.file.filename; 
-   const pdfpath = path.join(__dirname,`./uploads/${PdfFile}`);
-   const uploading = await Uploadimgs(pdfpath)
-   const Sending = await Sendmail(Email,PdfFile,pdfpath);
+   const Pdfpath = req.file.path; 
+   // const pdfpath = path.join(__dirname,`./uploads/${PdfFile}`);
+   const uploading = await Uploadimgs(Pdfpath)
+   const Sending = await Sendmail(Email,PdfFile,Pdfpath);
    const updatedMeeting = await rendezvous.findOneAndUpdate(
      { _id: req.params.id },
      { Date : Date,
@@ -68,11 +69,10 @@ app.put('/rendez-vous/:id', apiKeyAuth ,upload.single('PdfFile') , async (req, r
      { new: true }
    );
    res.json(updatedMeeting); 
-   fs.unlinkSync(pdfpath)
  });
  
 
- //fxjqhwwhdgctezin
+ 
 app.delete('/rendez-vous/:id', apiKeyAuth ,async (req, res) => {
    await rendezvous.findOneAndDelete({ _id: req.params.id });
    res.status(204).send();
