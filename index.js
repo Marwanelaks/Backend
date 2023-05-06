@@ -7,19 +7,29 @@ const {Sendmail} = require("./mailsender")
 const mongoose = require("mongoose")
 const path = require("path")
 const fs = require("fs")
+const os = require('os')
 const rendezvous = require("./schema")
 const admin = require("./adminschema")
 require('dotenv').config();
 app.use(cors())
 app.use(express.json())
-const storage = multer.diskStorage({
+// const storage = multer.diskStorage({
+//    destination: (req, file, cb) => {
+//      cb(null, "./uploads");
+//    },
+//    filename: (req, file, cb) => {
+//      cb(null, file.originalname);
+//    },
+//  });
+ const storage = multer.diskStorage({
    destination: (req, file, cb) => {
-     cb(null, "./uploads");
+     cb(null, os.tmpdir()) 
    },
    filename: (req, file, cb) => {
-     cb(null, file.originalname);
+     cb(null, `${file.fieldname}-${Date.now()}-${file.originalname}`)
    },
  });
+
  function apiKeyAuth(req, res, next) {
    const apiKey = req.headers['x-api-key'];
    if (!apiKey || apiKey != process.env.NODE_ENV_API_KEY) {
@@ -54,22 +64,46 @@ app.post("/rendez-vous", apiKeyAuth ,(req,res)=>{
 });
    meeting.save()
 })
-app.put('/rendez-vous/:id', apiKeyAuth ,upload.single('PdfFile') , async (req, res) => {
-   const {Date,Temps,Email} = req.body;
-   const PdfFile = req.file.filename; 
-   const Pdfpath = req.file.path; 
-   // const pdfpath = path.join(__dirname,`./uploads/${PdfFile}`);
-   const uploading = await Uploadimgs(Pdfpath)
-   const Sending = await Sendmail(Email,PdfFile,Pdfpath);
-   const updatedMeeting = await rendezvous.findOneAndUpdate(
-     { _id: req.params.id },
-     { Date : Date,
-       Temps : Temps,  
-      }, 
-     { new: true }
-   );
-   res.json(updatedMeeting); 
+// app.put('/rendez-vous/:id', apiKeyAuth ,upload.single('PdfFile') , async (req, res) => {
+//    const {Date,Temps,Email} = req.body;
+//    const PdfFile = req.file.filename; 
+//    const Pdfpath = req.file.path; 
+//    // const pdfpath = path.join(__dirname,`./uploads/${PdfFile}`);
+//    const uploading = await Uploadimgs(Pdfpath)
+//    const Sending = await Sendmail(Email,PdfFile,Pdfpath);
+//    const updatedMeeting = await rendezvous.findOneAndUpdate(
+//      { _id: req.params.id },
+//      { Date : Date,
+//        Temps : Temps,  
+//       }, 
+//      { new: true }
+//    );
+//    res.json(updatedMeeting); 
+//  });
+app.put('/rendez-vous/:id', apiKeyAuth, upload.single('PdfFile'), async (req, res) => {
+   const { Date, Temps, Email } = req.body;
+   const PdfFile = req.file.buffer;
+ 
+   try {
+     const filePath = await Uploadimgs(PdfFile);
+     const Sending = await Sendmail(Email, req.file.originalname, PdfFile);
+ 
+     const updatedMeeting = await rendezvous.findOneAndUpdate(
+       { _id: req.params.id },
+       {
+         Date: Date,
+         Temps: Temps,
+       },
+       { new: true }
+     );
+ 
+     res.json(updatedMeeting);
+   } catch (error) {
+     console.error(error);
+     res.status(500).send('Internal Server Error');
+   }
  });
+ 
  
 
  
